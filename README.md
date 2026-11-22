@@ -7,6 +7,8 @@ npm install
 npm run dev        # http://localhost:3000  (use --port 3210 if 3000 is busy)
 ```
 
+Live: https://crate-inventory-eight.vercel.app
+
 ## Modules
 
 | Route | What it does |
@@ -64,4 +66,17 @@ src/components/
   shell/          sidebar, top bar, command menu, global drawers
   dashboard/ sales/ purchases/ stock/ transfers/ godowns/ directory/ reports/
   ui/             shadcn/ui components
+video/            35 s product video, built with Remotion (separate package)
+```
+
+## Product video
+
+`video/` is a Remotion project that cuts real screens of the live app into a 35 second launch video: the hook, a received purchase raising stock, the low stock list clearing, a shipped sale, then the other screens. Music and sound effects are synthesized by a script, so nothing is downloaded.
+
+```bash
+cd video
+npm install
+node scripts/capture.mjs     # screenshots of the live app via headless Chrome
+node scripts/audio.mjs       # music bed + SFX as WAVs
+npm run render               # out/crate-launch.mp4
 ```
