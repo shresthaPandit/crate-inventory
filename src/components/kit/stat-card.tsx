@@ -35,7 +35,7 @@ export function StatCard({
     <Comp
       onClick={onClick}
       className={cn(
-        "group relative flex min-h-[132px] w-full min-w-0 flex-col justify-between gap-6 rounded-xl border border-border bg-card p-5 text-left",
+        "group relative flex min-h-[120px] w-full min-w-0 flex-col justify-between gap-5 rounded-xl border border-border bg-card p-4 text-left sm:min-h-[132px] sm:gap-6 sm:p-5",
         onClick && "transition-colors hover:bg-raised/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
         className,
       )}
@@ -46,7 +46,7 @@ export function StatCard({
       </div>
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline gap-1.5">
-          <AnimatedNumber value={value} kind={kind} className="text-[30px] leading-none font-medium tracking-[-0.02em] text-foreground" />
+          <AnimatedNumber value={value} kind={kind} className="text-[22px] leading-none font-medium tracking-[-0.02em] text-foreground sm:text-[30px]" />
           {suffix ? <span className="text-sm text-muted-foreground">{suffix}</span> : null}
         </div>
         {delta || footnote ? (
