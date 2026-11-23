@@ -4,30 +4,20 @@ import { motion } from "motion/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useMemo } from "react"
-import { ChevronsUpDownIcon, RotateCcwIcon, SearchIcon } from "lucide-react"
-import { toast } from "sonner"
+import { LifeBuoyIcon } from "lucide-react"
 import { EASE } from "@/components/kit/page"
-import { Keycap } from "@/components/kit/misc"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { lowStockItems } from "@/lib/calc"
-import { useInventory, useMounted, useUI } from "@/lib/store"
+import { useInventory, useMounted } from "@/lib/store"
 import { cn } from "@/lib/utils"
-import { NAV, type NavKey } from "./nav"
-import { ThemeSwitch } from "./theme-switch"
+import { useHelp } from "./help-sheet"
+import { COUNT_HINT, NAV, type NavKey } from "./nav"
 
-/** Flat mark: a crate seen from the front — a square with one slat. */
+/** Crate's mark: an orange crate with a hand slot. */
 export function CrateMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" aria-hidden className={cn("size-5", className)}>
-      <rect x="2" y="2" width="16" height="16" rx="4" className="fill-foreground" />
-      <rect x="5" y="9" width="10" height="2" rx="1" className="fill-background" />
+      <rect x="1" y="1" width="18" height="18" rx="5" className="fill-brand" />
+      <rect x="5" y="9" width="10" height="2.2" rx="1.1" className="fill-white" />
     </svg>
   )
 }
@@ -48,60 +38,30 @@ function useCounts(): Record<NavKey, number | null> {
   }, [mounted, salesOrders, purchaseOrders, stock, items])
 }
 
+/** Navy menu with an orange "you are here" pill. Used by the desktop sidebar and the phone menu. */
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
   const counts = useCounts()
-  const setCommandOpen = useUI((s) => s.setCommandOpen)
-  const resetDemo = useInventory((s) => s.resetDemo)
+  const openHelp = useHelp((s) => s.setOpen)
 
   return (
-    <div className="flex h-full flex-col gap-4 px-3 pt-3 pb-3">
-      {/* Workspace */}
-      <DropdownMenu>
-        <DropdownMenuTrigger className="flex h-11 w-full items-center gap-2.5 rounded-lg px-2 text-left transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring/50 data-[state=open]:bg-sidebar-accent">
-          <CrateMark />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="text-[15px] leading-tight font-medium">Crate</span>
-            <span className="truncate text-xs text-muted-foreground">Deccan Electric Supply</span>
-          </div>
-          <ChevronsUpDownIcon className="size-4 text-muted-foreground" strokeWidth={1.5} />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-60">
-          <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Workspace</DropdownMenuLabel>
-          <DropdownMenuItem className="gap-2">
-            <CrateMark className="size-4" />
-            Deccan Electric Supply
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={() => {
-              resetDemo()
-              toast.success("Sample data restored", { description: "Stock, orders and history are back to the starting point" })
-            }}
-            className="gap-2"
-          >
-            <RotateCcwIcon className="size-4" strokeWidth={1.5} />
-            Reset sample data
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {/* Search */}
-      <button
-        type="button"
-        onClick={() => setCommandOpen(true)}
-        className="flex h-8 items-center gap-2 rounded-lg border border-sidebar-border bg-background/40 px-2.5 text-sm text-muted-foreground transition-colors hover:border-foreground/15 hover:text-fg-secondary"
+    <div className="flex h-full flex-col gap-6 bg-sidebar px-3 pt-5 pb-4 text-sidebar-foreground">
+      <Link
+        href="/"
+        onClick={onNavigate}
+        className="flex items-center gap-3 rounded-lg px-2 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/60"
       >
-        <SearchIcon className="size-4" strokeWidth={1.5} />
-        <span className="flex-1 text-left">Search</span>
-        <Keycap>Ctrl K</Keycap>
-      </button>
+        <CrateMark className="size-9" />
+        <div className="flex min-w-0 flex-col">
+          <span className="text-[17px] leading-tight font-semibold text-white">Crate</span>
+          <span className="truncate text-[13px] text-white/60">Deccan Electric Supply</span>
+        </div>
+      </Link>
 
-      {/* Navigation */}
-      <nav className="scroll-quiet -mx-1 flex flex-1 flex-col overflow-y-auto px-1">
-        {NAV.map((group, gi) => (
-          <div key={gi} className={cn("flex flex-col gap-0.5", gi > 0 && "mt-6")}>
-            {group.label ? <div className="mb-1 px-2 text-xs text-muted-foreground">{group.label}</div> : null}
+      <nav className="scroll-quiet -mx-1 flex flex-1 flex-col gap-6 overflow-y-auto px-1">
+        {NAV.map((group) => (
+          <div key={group.label} className="flex flex-col gap-1">
+            <div className="mb-1 px-3 text-[13px] font-medium text-white/45">{group.label}</div>
             {group.items.map((item) => {
               const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
               const count = item.count ? counts[item.count] : null
@@ -111,30 +71,36 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   key={item.href}
                   href={item.href}
                   onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group relative flex h-8 items-center gap-2.5 rounded-lg px-2 text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                    active ? "text-foreground" : "text-fg-secondary hover:bg-sidebar-accent/70 hover:text-foreground",
+                    "group relative flex h-11 items-center gap-3 rounded-lg px-3 text-[15px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/60",
+                    active ? "font-semibold text-white" : "text-white/75 hover:bg-sidebar-accent hover:text-white",
                   )}
                 >
                   {active ? (
                     <motion.span
                       layoutId="nav-active"
-                      transition={{ duration: 0.35, ease: EASE }}
-                      className="absolute inset-0 rounded-lg border border-sidebar-border bg-sidebar-accent shadow-highlight"
+                      transition={{ duration: 0.3, ease: EASE }}
+                      className="absolute inset-0 rounded-lg bg-primary shadow-[0_4px_14px_rgb(234_108_15/0.35)]"
                     />
                   ) : null}
                   <Icon
-                    className={cn("relative size-4 shrink-0", active ? "text-foreground" : "text-muted-foreground group-hover:text-fg-secondary")}
-                    strokeWidth={1.5}
+                    className={cn("relative size-5 shrink-0", active ? "text-white" : "text-white/55 group-hover:text-white/85")}
+                    strokeWidth={1.75}
                   />
                   <span className="relative flex-1 truncate">{item.label}</span>
-                  {count ? (
+                  {count && item.count ? (
                     <span
                       className={cn(
-                        "relative font-mono text-xs tabular",
-                        item.count === "stock" ? "text-warning" : "text-muted-foreground",
+                        "relative min-w-6 rounded-full px-2 text-center text-xs leading-6 font-semibold tabular",
+                        active
+                          ? "bg-white/25 text-white"
+                          : item.count === "stock"
+                            ? "bg-amber-400/20 text-amber-300"
+                            : "bg-white/10 text-white/85",
                       )}
-                      title={item.count === "stock" ? "Items at or below min level" : "Open"}
+                      title={`${count} ${COUNT_HINT[item.count]}`}
+                      aria-label={`${count} ${COUNT_HINT[item.count]}`}
                     >
                       {count}
                     </span>
@@ -146,14 +112,29 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="flex items-center gap-2.5 rounded-lg px-2 pt-2">
-        <div className="grid size-7 shrink-0 place-items-center rounded-full bg-raised text-xs font-medium text-fg-secondary">AM</div>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm leading-tight">Aarav Mehta</span>
-          <span className="truncate text-xs text-muted-foreground">Stores manager</span>
+      <button
+        type="button"
+        onClick={() => {
+          onNavigate?.()
+          openHelp(true)
+        }}
+        className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-left transition-colors outline-none hover:border-brand/50 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-sidebar-ring/60"
+      >
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand text-white">
+          <LifeBuoyIcon className="size-5" strokeWidth={1.75} />
+        </span>
+        <span className="flex min-w-0 flex-col">
+          <span className="text-sm font-semibold text-white">Help and guide</span>
+          <span className="text-[13px] text-white/60">How Crate works, in 3 steps</span>
+        </span>
+      </button>
+
+      <div className="flex items-center gap-3 px-2">
+        <div className="grid size-9 shrink-0 place-items-center rounded-full bg-white/10 text-sm font-semibold text-white">AM</div>
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate text-sm leading-tight font-medium text-white">Aarav Mehta</span>
+          <span className="truncate text-[13px] text-white/60">Stores manager</span>
         </div>
-        <ThemeSwitch />
       </div>
     </div>
   )
@@ -161,7 +142,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function Sidebar() {
   return (
-    <aside className="sticky top-0 hidden h-dvh w-[248px] shrink-0 border-r border-sidebar-border bg-sidebar lg:block">
+    <aside className="sticky top-0 hidden h-dvh w-[264px] shrink-0 bg-sidebar lg:block">
       <SidebarContent />
     </aside>
   )

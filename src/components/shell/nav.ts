@@ -1,10 +1,10 @@
 import {
-  ArrowLeftRightIcon,
+  ArrowRightLeftIcon,
   BoxesIcon,
   ChartColumnIcon,
   FactoryIcon,
-  LayoutDashboardIcon,
-  ReceiptTextIcon,
+  HouseIcon,
+  ShoppingCartIcon,
   TruckIcon,
   UsersIcon,
   WarehouseIcon,
@@ -15,35 +15,41 @@ export type NavKey = "sales" | "purchases" | "stock"
 export interface NavItem {
   href: string
   label: string
+  /** a few words under the label: what you find there */
+  hint: string
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
   /** which live count to show on the right */
   count?: NavKey
 }
 
-export const NAV: { label?: string; items: NavItem[] }[] = [
-  { items: [{ href: "/", label: "Dashboard", icon: LayoutDashboardIcon }] },
+export const NAV: { label: string; items: NavItem[] }[] = [
   {
-    label: "Operations",
+    label: "Daily work",
     items: [
-      { href: "/sales", label: "Sales", icon: ReceiptTextIcon, count: "sales" },
-      { href: "/purchases", label: "Purchases", icon: TruckIcon, count: "purchases" },
-      { href: "/stock", label: "Stock", icon: BoxesIcon, count: "stock" },
-      { href: "/transfers", label: "Transfers", icon: ArrowLeftRightIcon },
+      { href: "/", label: "Home", hint: "Today at a glance", icon: HouseIcon },
+      { href: "/sales", label: "Sales", hint: "Orders from customers", icon: ShoppingCartIcon, count: "sales" },
+      { href: "/purchases", label: "Purchases", hint: "Orders to suppliers", icon: TruckIcon, count: "purchases" },
+      { href: "/stock", label: "Stock", hint: "What you have, item by item", icon: BoxesIcon, count: "stock" },
+      { href: "/transfers", label: "Move stock", hint: "Between godowns", icon: ArrowRightLeftIcon },
     ],
   },
   {
-    label: "Directory",
+    label: "Records",
     items: [
-      { href: "/godowns", label: "Godowns", icon: WarehouseIcon },
-      { href: "/customers", label: "Customers", icon: UsersIcon },
-      { href: "/suppliers", label: "Suppliers", icon: FactoryIcon },
+      { href: "/godowns", label: "Godowns", hint: "Your warehouses", icon: WarehouseIcon },
+      { href: "/customers", label: "Customers", hint: "Who buys from you", icon: UsersIcon },
+      { href: "/suppliers", label: "Suppliers", hint: "Who you buy from", icon: FactoryIcon },
+      { href: "/reports", label: "Reports", hint: "Totals and downloads", icon: ChartColumnIcon },
     ],
-  },
-  {
-    label: "Insights",
-    items: [{ href: "/reports", label: "Reports", icon: ChartColumnIcon }],
   },
 ]
+
+/** What the number next to a menu item means. */
+export const COUNT_HINT: Record<NavKey, string> = {
+  sales: "orders waiting to be shipped or confirmed",
+  purchases: "orders on the way from suppliers",
+  stock: "items running low",
+}
 
 export const ALL_NAV = NAV.flatMap((g) => g.items.map((i) => ({ ...i, group: g.label })))
 

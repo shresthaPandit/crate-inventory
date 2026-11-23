@@ -2,11 +2,12 @@ import { addDays, differenceInCalendarDays, startOfDay, startOfMonth } from "dat
 
 export type RangeKey = "7d" | "30d" | "60d" | "month"
 
+/** Shortest first. Each label says exactly which days are counted. */
 export const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
   { value: "7d", label: "Last 7 days" },
+  { value: "month", label: "This month" },
   { value: "30d", label: "Last 30 days" },
   { value: "60d", label: "Last 60 days" },
-  { value: "month", label: "This month" },
 ]
 
 export interface Range {
@@ -20,7 +21,7 @@ export interface Range {
   prevTo: number
   /** calendar days in the range, today included */
   days: number
-  /** "vs previous 30 days" */
+  /** "the 30 days before", read as "12% more than the 30 days before" */
   compareLabel: string
   /** daily buckets up to a month, weekly beyond */
   bucket: "day" | "week"
@@ -40,7 +41,7 @@ export function getRange(key: RangeKey, now = Date.now()): Range {
     prevFrom,
     prevTo: from.getTime(),
     days,
-    compareLabel: `vs previous ${days} ${days === 1 ? "day" : "days"}`,
+    compareLabel: days === 1 ? "the day before" : `the ${days} days before`,
     bucket: days > 31 ? "week" : "day",
   }
 }

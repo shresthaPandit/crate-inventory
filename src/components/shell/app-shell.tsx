@@ -3,6 +3,8 @@
 import { useMounted } from "@/lib/store"
 import { CommandMenu } from "./command-menu"
 import { GlobalSheets } from "./global-sheets"
+import { HelpSheet } from "./help-sheet"
+import { MobileNav } from "./mobile-nav"
 import { Sidebar } from "./sidebar"
 import { Topbar } from "./topbar"
 
@@ -15,7 +17,7 @@ function ShellSkeleton() {
       </div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="h-[132px] rounded-xl border border-border bg-card" />
+          <div key={i} className="h-[150px] rounded-xl border border-border bg-card" />
         ))}
       </div>
       <div className="h-80 rounded-xl border border-border bg-card" />
@@ -35,11 +37,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {children}
             <GlobalSheets />
             <CommandMenu />
+            <HelpSheet />
           </>
         ) : (
           <ShellSkeleton />
         )}
       </div>
+      <MobileNav />
     </div>
   )
 }

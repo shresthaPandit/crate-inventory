@@ -3,12 +3,18 @@
 import { motion } from "motion/react"
 import { useRouter } from "next/navigation"
 import { useMemo } from "react"
-import { BinLabel, Mono } from "@/components/kit/misc"
+import { ChevronRightIcon, CircleCheckIcon, TriangleAlertIcon } from "lucide-react"
+import { HelpTip } from "@/components/kit/help"
+import { ItemIcon } from "@/components/kit/misc"
 import { EASE } from "@/components/kit/page"
 import { Panel } from "@/components/kit/panel"
 import { inr, num } from "@/lib/format"
-import { useInventory, useUI } from "@/lib/store"
-import { DAY_MS, useNow } from "./use-now"
+import { useInventory, useNow, useUI } from "@/lib/store"
+import { GLOSSARY } from "@/lib/words"
+import { count, qty } from "./plain"
+import { DAY_MS } from "./use-now"
+
+const GODOWN_MEANING = GLOSSARY.find((g) => g.term === "Godown")?.meaning
 
 /** Top 6 items by sales value shipped in the last 30 days. */
 export function TopMoversPanel({ className }: { className?: string }) {
@@ -40,45 +46,53 @@ export function TopMoversPanel({ className }: { className?: string }) {
   }, [salesOrders, items, now])
 
   return (
-    <Panel className={className} title="Top movers" description="By sales value, last 30 days, before GST" bodyClassName="px-3 pb-3">
-      <ol className="flex flex-col">
-        {rows.map(({ item, value, units, share }, i) => (
-          <li key={item.id}>
-            <button
-              type="button"
-              onClick={() => openPanel({ type: "item", id: item.id })}
-              className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors outline-none hover:bg-raised/60 focus-visible:ring-2 focus-visible:ring-ring/50"
-            >
-              <Mono className="w-4 shrink-0 text-right">{i + 1}</Mono>
-              <BinLabel category={item.category} size="sm" />
-              <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                <span className="flex items-baseline gap-3">
-                  <span className="min-w-0 flex-1 truncate text-sm text-foreground">{item.name}</span>
-                  <span className="shrink-0 font-mono text-sm text-foreground tabular">{inr(value)}</span>
-                </span>
-                <span className="flex items-center gap-3">
-                  <span className="h-1 flex-1 overflow-hidden rounded-full bg-foreground/[0.06]">
-                    <motion.span
-                      className="block h-full origin-left rounded-full bg-fg-secondary/70"
-                      initial={{ scaleX: 0 }}
-                      animate={{ scaleX: share }}
-                      transition={{ duration: 0.6, ease: EASE }}
-                    />
+    <Panel
+      className={className}
+      title="Best sellers"
+      description="Items that brought in the most money in the last 30 days, before tax."
+      flush
+    >
+      {rows.length === 0 ? (
+        <p className="border-t border-border px-5 py-6 text-[15px] text-muted-foreground">No sales shipped in the last 30 days yet.</p>
+      ) : (
+        <ol className="flex flex-col divide-y divide-border border-t border-border">
+          {rows.map(({ item, value, units, share }, i) => (
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={() => openPanel({ type: "item", id: item.id })}
+                className="group flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors outline-none hover:bg-raised/60 focus-visible:bg-raised/60 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
+              >
+                <span className="w-5 shrink-0 text-right text-[15px] font-semibold text-muted-foreground tabular">{i + 1}</span>
+                <ItemIcon category={item.category} size="sm" />
+                <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <span className="flex items-baseline gap-3">
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-foreground">{item.name}</span>
+                    <span className="shrink-0 text-[15px] font-medium text-foreground tabular">{inr(value)}</span>
                   </span>
-                  <span className="w-20 shrink-0 text-right font-mono text-xs text-muted-foreground tabular">
-                    {num(units)} {item.unit}
+                  <span className="flex items-center gap-3">
+                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-raised">
+                      <motion.span
+                        className="block h-full origin-left rounded-full bg-[var(--chart-2)]"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: share }}
+                        transition={{ duration: 0.6, ease: EASE }}
+                      />
+                    </span>
+                    <span className="shrink-0 text-right text-[13px] text-muted-foreground tabular">{qty(units, item.unit)} sold</span>
                   </span>
                 </span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ol>
+                <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-muted-foreground group-hover:text-primary-ink" strokeWidth={2} />
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
     </Panel>
   )
 }
 
-/** Per-godown units, value, fill against capacity and items out there. */
+/** Per-godown stock value, how full it is, and how many items are missing there. */
 export function GodownsPanel({ className }: { className?: string }) {
   const router = useRouter()
   const godowns = useInventory((s) => s.godowns)
@@ -103,43 +117,65 @@ export function GodownsPanel({ className }: { className?: string }) {
   )
 
   return (
-    <Panel className={className} title="Godowns" description="Units on hand against rack capacity" bodyClassName="px-3 pb-3">
-      <ul className="flex flex-col">
+    <Panel
+      className={className}
+      title={
+        <span className="inline-flex items-center gap-1.5">
+          Your godowns
+          {GODOWN_MEANING ? (
+            <HelpTip label="What is a godown?">
+              <span className="font-medium text-foreground">Godown.</span> {GODOWN_MEANING}
+            </HelpTip>
+          ) : null}
+        </span>
+      }
+      description="What each godown holds and how full it is."
+      flush
+    >
+      <ul className="flex flex-col divide-y divide-border border-t border-border">
         {rows.map(({ g, units, value, out, fill }) => (
           <li key={g.id}>
             <button
               type="button"
               onClick={() => router.push("/godowns")}
-              className="flex w-full flex-col gap-2.5 rounded-lg px-2 py-3 text-left transition-colors outline-none hover:bg-raised/60 focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="group flex w-full items-center gap-3 px-5 py-4 text-left transition-colors outline-none hover:bg-raised/60 focus-visible:bg-raised/60 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
             >
-              <span className="flex items-baseline gap-3">
-                <span className="text-sm text-foreground">{g.name}</span>
-                <Mono>{g.code}</Mono>
-                <span className="ml-auto font-mono text-sm text-foreground tabular">{inr(value)}</span>
-              </span>
-              <span className="flex items-center gap-3">
-                <span className="h-1 flex-1 overflow-hidden rounded-full bg-foreground/[0.06]">
-                  <motion.span
-                    className="block h-full origin-left rounded-full bg-fg-secondary/70"
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: fill }}
-                    transition={{ duration: 0.6, ease: EASE }}
-                  />
-                </span>
-                <span className="w-28 shrink-0 text-right font-mono text-xs text-muted-foreground tabular">
-                  {num(units)} / {num(g.capacity)}
-                </span>
-              </span>
-              <span className="flex items-center gap-3 text-xs">
-                <span className="text-muted-foreground">{g.manager}</span>
-                {out > 0 ? (
-                  <span className="ml-auto text-warning">
-                    {out} {out === 1 ? "item" : "items"} out here
+              <span className="flex min-w-0 flex-1 flex-col gap-2">
+                <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                  <span className="text-[15px] font-semibold text-foreground">
+                    {g.name} <span className="font-normal text-muted-foreground">· {g.city}</span>
                   </span>
-                ) : (
-                  <span className="ml-auto text-muted-foreground">All items stocked</span>
-                )}
+                  <span className="text-[15px] text-foreground tabular">{inr(value)} of stock</span>
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-raised">
+                    <motion.span
+                      className="block h-full origin-left rounded-full bg-[var(--chart-3)]"
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: fill }}
+                      transition={{ duration: 0.6, ease: EASE }}
+                    />
+                  </span>
+                  <span className="shrink-0 text-[13px] text-muted-foreground tabular">{Math.round(fill * 100)}% full</span>
+                </span>
+                <span className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[13px]">
+                  <span className="text-muted-foreground">
+                    {num(units)} of {num(g.capacity)} units of space · {g.manager} looks after it
+                  </span>
+                  {out > 0 ? (
+                    <span className="inline-flex items-center gap-1 font-medium text-warning">
+                      <TriangleAlertIcon className="size-3.5" strokeWidth={2} />
+                      {count(out, "item")} out of stock here
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-positive">
+                      <CircleCheckIcon className="size-3.5" strokeWidth={2} />
+                      Every item in stock
+                    </span>
+                  )}
+                </span>
               </span>
+              <ChevronRightIcon aria-hidden className="size-4 shrink-0 text-muted-foreground group-hover:text-primary-ink" strokeWidth={2} />
             </button>
           </li>
         ))}

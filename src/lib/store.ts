@@ -112,8 +112,8 @@ const units = (lines: { qty: number }[]) => lines.reduce((s, l) => s + l.qty, 0)
 
 function validLines(lines: { itemId: string; qty: number }[]) {
   if (!lines.length) return "Add at least one item"
-  if (lines.some((l) => !l.itemId)) return "Pick an item for every line"
-  if (lines.some((l) => !Number.isFinite(l.qty) || l.qty <= 0)) return "Quantities must be above zero"
+  if (lines.some((l) => !l.itemId)) return "Choose an item in every row, or remove the empty row"
+  if (lines.some((l) => !Number.isFinite(l.qty) || l.qty <= 0)) return "Every quantity must be 1 or more"
   return null
 }
 
@@ -133,7 +133,7 @@ export const useInventory = create<InventoryState>()(
         if (short.length) {
           const first = short[0]
           return fail(
-            `Not enough ${nameOf.item(first.itemId)} at ${nameOf.godown(so.godownId)}: need ${num(first.need)}, have ${num(first.have)}`,
+            `Not enough ${nameOf.item(first.itemId)} at ${nameOf.godown(so.godownId)}: you need ${num(first.need)}, only ${num(first.have)} in stock`,
           )
         }
         const at = now()
@@ -196,13 +196,13 @@ export const useInventory = create<InventoryState>()(
           const err = validLines(input.lines)
           if (err) return fail(err)
           if (!input.customerId) return fail("Choose a customer")
-          if (!input.godownId) return fail("Choose a godown to ship from")
+          if (!input.godownId) return fail("Choose the godown the items are coming from")
           if (input.status === "shipped") {
             const short = shortages(get().stock, input.godownId, input.lines)
             if (short.length) {
               const f = short[0]
               return fail(
-                `Not enough ${nameOf.item(f.itemId)} at ${nameOf.godown(input.godownId)}: need ${num(f.need)}, have ${num(f.have)}`,
+                `Not enough ${nameOf.item(f.itemId)} at ${nameOf.godown(input.godownId)}: you need ${num(f.need)}, only ${num(f.have)} in stock`,
               )
             }
           }
@@ -239,7 +239,7 @@ export const useInventory = create<InventoryState>()(
 
         confirmSale(id) {
           const so = get().salesOrders.find((o) => o.id === id)
-          if (!so) return fail("Order not found")
+          if (!so) return fail("This order could not be found")
           if (so.status !== "draft") return fail(`${so.number} is already ${so.status}`)
           const next: SalesOrder = { ...so, status: "confirmed" }
           set((s) => ({ salesOrders: upsert(s.salesOrders, next) }))
@@ -248,7 +248,7 @@ export const useInventory = create<InventoryState>()(
 
         shipSale(id) {
           const so = get().salesOrders.find((o) => o.id === id)
-          if (!so) return fail("Order not found")
+          if (!so) return fail("This order could not be found")
           if (so.status === "shipped") return fail(`${so.number} has already shipped`)
           if (so.status === "cancelled") return fail(`${so.number} is cancelled`)
           return doShip(so)
@@ -256,7 +256,7 @@ export const useInventory = create<InventoryState>()(
 
         markSalePaid(id) {
           const so = get().salesOrders.find((o) => o.id === id)
-          if (!so) return fail("Order not found")
+          if (!so) return fail("This order could not be found")
           if (so.payment === "paid") return fail(`${so.number} is already paid`)
           if (so.status === "cancelled") return fail(`${so.number} is cancelled`)
           const next: SalesOrder = { ...so, payment: "paid", paidAt: now() }
@@ -277,8 +277,8 @@ export const useInventory = create<InventoryState>()(
 
         cancelSale(id) {
           const so = get().salesOrders.find((o) => o.id === id)
-          if (!so) return fail("Order not found")
-          if (so.status === "shipped") return fail("Shipped orders cannot be cancelled. Raise a return instead")
+          if (!so) return fail("This order could not be found")
+          if (so.status === "shipped") return fail("This order has already been shipped, so it cannot be cancelled")
           if (so.status === "cancelled") return fail(`${so.number} is already cancelled`)
           const next: SalesOrder = { ...so, status: "cancelled" }
           set((s) => ({
@@ -295,7 +295,7 @@ export const useInventory = create<InventoryState>()(
           const err = validLines(input.lines)
           if (err) return fail(err)
           if (!input.supplierId) return fail("Choose a supplier")
-          if (!input.godownId) return fail("Choose a godown to receive into")
+          if (!input.godownId) return fail("Choose the godown the goods should go to")
           const s = get()
           const po: PurchaseOrder = {
             id: uid("po"),
@@ -314,7 +314,7 @@ export const useInventory = create<InventoryState>()(
             activities: [
               activity({
                 kind: "po_created",
-                title: `Raised ${po.number} with ${nameOf.supplier(po.supplierId)}`,
+                title: `Ordered from ${nameOf.supplier(po.supplierId)} (${po.number})`,
                 meta: `${num(units(po.lines))} units · due ${dateShort(po.expectedDate)}`,
                 target: { type: "purchase", id: po.id },
               }),
@@ -327,14 +327,14 @@ export const useInventory = create<InventoryState>()(
 
         receivePurchase(id) {
           const po = get().purchaseOrders.find((p) => p.id === id)
-          if (!po) return fail("Purchase order not found")
+          if (!po) return fail("This supplier order could not be found")
           if (po.status !== "ordered") return fail(`${po.number} is already ${po.status}`)
           return doReceive(po)
         },
 
         cancelPurchase(id) {
           const po = get().purchaseOrders.find((p) => p.id === id)
-          if (!po) return fail("Purchase order not found")
+          if (!po) return fail("This supplier order could not be found")
           if (po.status !== "ordered") return fail(`${po.number} is already ${po.status}`)
           const next: PurchaseOrder = { ...po, status: "cancelled" }
           set((s) => ({
@@ -359,7 +359,7 @@ export const useInventory = create<InventoryState>()(
           )
           if (short.length) {
             const f = short[0]
-            return fail(`Only ${num(f.have)} ${nameOf.item(f.itemId)} at ${nameOf.godown(input.fromGodownId)}`)
+            return fail(`Only ${num(f.have)} of ${nameOf.item(f.itemId)} in ${nameOf.godown(input.fromGodownId)}`)
           }
           const at = now()
           const tr: Transfer = {
@@ -387,7 +387,7 @@ export const useInventory = create<InventoryState>()(
             activities: [
               activity({
                 kind: "transfer",
-                title: `Moved ${num(units(input.lines))} units ${nameOf.godown(input.fromGodownId)} to ${nameOf.godown(input.toGodownId)}`,
+                title: `Moved ${num(units(input.lines))} units from ${nameOf.godown(input.fromGodownId)} to ${nameOf.godown(input.toGodownId)}`,
                 meta: `${tr.number} · ${input.lines.length} ${input.lines.length === 1 ? "item" : "items"}`,
                 target: { type: "transfer", id: tr.id },
               }),
@@ -398,11 +398,11 @@ export const useInventory = create<InventoryState>()(
         },
 
         adjustStock(input) {
-          if (!input.qty || !Number.isFinite(input.qty)) return fail("Enter a change other than zero")
-          if (!input.reason.trim()) return fail("Add a reason for the ledger")
+          if (!input.qty || !Number.isFinite(input.qty)) return fail("The count is the same as before, so there is nothing to correct")
+          if (!input.reason.trim()) return fail("Choose a reason for the correction")
           const s = get()
           const have = onHand(s.stock, input.itemId, input.godownId)
-          if (have + input.qty < 0) return fail(`Only ${num(have)} on hand at ${nameOf.godown(input.godownId)}`)
+          if (have + input.qty < 0) return fail(`Only ${num(have)} in stock at ${nameOf.godown(input.godownId)}`)
           const ref = `ADJ-0${s.counters.adj}`
           const { stock, rows } = applyMoves(
             s.stock,
@@ -416,7 +416,7 @@ export const useInventory = create<InventoryState>()(
             activities: [
               activity({
                 kind: "adjustment",
-                title: `Adjusted ${nameOf.item(input.itemId)}`,
+                title: `Corrected the count of ${nameOf.item(input.itemId)}`,
                 meta: `${input.qty > 0 ? "+" : "−"}${num(Math.abs(input.qty))} at ${nameOf.godown(input.godownId)} · ${input.reason}`,
                 target: { type: "item", id: input.itemId },
               }),
@@ -437,7 +437,9 @@ export const useInventory = create<InventoryState>()(
     },
     {
       name: "crate-inventory",
-      version: 1,
+      // v2: plain-language redesign. Older saved data starts fresh from the sample data.
+      version: 2,
+      migrate: () => createSeed(),
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         items: s.items,

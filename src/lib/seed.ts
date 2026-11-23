@@ -291,7 +291,7 @@ export function createSeed(nowMs = Date.now()): InventoryData {
     purchaseOrders.push(po)
     log(at, {
       kind: "po_created",
-      title: `Raised ${number} with ${supById.get(supplierId)!.name}`,
+      title: `Ordered from ${supById.get(supplierId)!.name} (${number})`,
       meta: `${num(units(lines))} units · due ${dateShort(expectedMs)}`,
       target: { type: "purchase", id: po.id },
     })
@@ -320,7 +320,7 @@ export function createSeed(nowMs = Date.now()): InventoryData {
     }
     log(at, {
       kind: "transfer",
-      title: `Moved ${num(units(lines))} units ${gdById.get(from)!.name} to ${gdById.get(to)!.name}`,
+      title: `Moved ${num(units(lines))} units from ${gdById.get(from)!.name} to ${gdById.get(to)!.name}`,
       meta: `${number} · ${lines.length} ${lines.length === 1 ? "item" : "items"}`,
       target: { type: "transfer", id: tr.id },
     })
@@ -332,7 +332,7 @@ export function createSeed(nowMs = Date.now()): InventoryData {
     const it = itemById.get(itemId)!
     log(at, {
       kind: "adjustment",
-      title: `Adjusted ${it.name}`,
+      title: `Corrected the count of ${it.name}`,
       meta: `${qty > 0 ? "+" : "−"}${Math.abs(qty)} at ${gdById.get(godownId)!.name} · ${reason}`,
       target: { type: "item", id: itemId },
     })

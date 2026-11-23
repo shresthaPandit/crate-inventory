@@ -5,17 +5,18 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Crate — design tokens
-  Graphite neutral ramp (unslop tokens), one accent: "hi-vis", the yellow-green
-  of a warehouse safety vest. Accent marks the selection, the one key figure and
-  the line that matters in a chart. Everything else stays grey.
+  Crate — design tokens (v2, "clear")
+  Built for people using inventory software for the first time: white
+  surfaces, large type, one blue for "do this", and status colours that
+  mean the same thing everywhere: green = fine, amber = needs attention
+  soon, red = act now. Numbers use the normal font with tabular figures.
 */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-geist-sans);
   --font-heading: var(--font-geist-sans);
 
   --color-sidebar-ring: var(--sidebar-ring);
@@ -43,6 +44,9 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -58,6 +62,11 @@
   --color-negative: var(--negative);
   --color-warning: var(--warning);
   --color-hairline: var(--border);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative-soft: var(--negative-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -72,57 +81,72 @@
   --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Light — graphite */
+/* Light — the only theme */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.75rem;
 
-  --background: #fafafa;
-  --foreground: #171717;
-  --fg-secondary: #525252;
-  --muted-foreground: #737373;
+  --background: #f5f6f8;
+  --foreground: #0f172a;
+  --fg-secondary: #334155;
+  --muted-foreground: #64748b;
 
   --card: #ffffff;
-  --card-foreground: #171717;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #171717;
-  --raised: #f4f4f5;
+  --popover-foreground: #0f172a;
+  --raised: #f1f5f9;
 
-  --primary: #171717;
-  --primary-foreground: #fafafa;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #171717;
-  --muted: #f4f4f5;
-  --accent: #f4f4f5;
-  --accent-foreground: #171717;
+  /* BeatRoute orange. --brand is the logo orange; --primary is a touch deeper so
+     white button text stays readable; --primary-ink is for orange text and links. */
+  --brand: #f58220;
+  --brand-soft: #fff1e5;
+  --primary: #ea6c0f;
+  --primary-foreground: #ffffff;
+  --primary-ink: #c2410c;
+  --secondary: #eef2f7;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --accent: #fff4eb;
+  --accent-foreground: #c2410c;
 
   --destructive: #dc2626;
-  --border: rgb(23 23 23 / 0.08);
-  --input: rgb(23 23 23 / 0.12);
-  --ring: #737373;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #ea6c0f;
 
-  --signal: #c9e14a;
-  --signal-foreground: #171717;
-  --signal-ink: #4d5d00;
-  --positive: #16a34a;
+  /* "signal" now means the action orange */
+  --signal: #ea6c0f;
+  --signal-foreground: #ffffff;
+  --signal-ink: #c2410c;
+
+  --positive: #15803d;
+  --positive-soft: #dcfce7;
   --negative: #dc2626;
-  --warning: #b45309;
+  --negative-soft: #fee2e2;
+  --warning: #a16207;
+  --warning-soft: #fef3c7;
+  --info: #1d4ed8;
+  --info-soft: #dbeafe;
 
-  --chart-1: #8fa31a;
-  --chart-2: #a3a3a3;
-  --chart-3: #d4d4d4;
-  --chart-4: #737373;
-  --chart-5: #525252;
+  /* charts: in = green, out = blue, then neutrals */
+  --chart-1: #16a34a;
+  --chart-2: #3b82f6;
+  --chart-3: #94a3b8;
+  --chart-4: #f59e0b;
+  --chart-5: #8b5cf6;
 
-  --sidebar: #f4f4f5;
-  --sidebar-foreground: #171717;
-  --sidebar-primary: #171717;
-  --sidebar-primary-foreground: #fafafa;
-  --sidebar-accent: #e9e9eb;
-  --sidebar-accent-foreground: #171717;
-  --sidebar-border: rgb(23 23 23 / 0.08);
-  --sidebar-ring: #737373;
+  /* deep navy sidebar so the app is not all white */
+  --sidebar: #19213a;
+  --sidebar-foreground: #e6e9f2;
+  --sidebar-primary: #f58220;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgb(255 255 255 / 0.07);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.08);
+  --sidebar-ring: #f58220;
 
-  --shadow-float: 0 8px 24px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.05);
+  --shadow-float: 0 12px 32px rgb(15 23 42 / 0.1), 0 2px 6px rgb(15 23 42 / 0.06);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.04);
   --highlight: inset 0 1px 0 rgb(255 255 255 / 0.6);
 }
 
@@ -191,15 +215,18 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
+  }
+  /* "mono" is the sans face with tabular figures: numbers line up, nothing looks like code */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
   ::selection {
-    background: color-mix(in oklab, var(--signal) 35%, transparent);
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
   }
 }
 
@@ -209,6 +236,9 @@
   }
   .shadow-float {
     box-shadow: var(--shadow-float);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
   }
   .shadow-highlight {
     box-shadow: var(--highlight);

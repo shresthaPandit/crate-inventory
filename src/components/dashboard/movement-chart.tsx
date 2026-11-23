@@ -1,20 +1,24 @@
 "use client"
 
+import { format } from "date-fns"
 import { useMemo, useState } from "react"
-import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Segmented } from "@/components/kit/misc"
 import { Panel } from "@/components/kit/panel"
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
-import { date, dateShort, num, signed } from "@/lib/format"
-import { useInventory } from "@/lib/store"
+import { dateShort, num } from "@/lib/format"
+import { useInventory, useNow } from "@/lib/store"
 import { cn } from "@/lib/utils"
-import { DAY_MS, dayStart, useNow } from "./use-now"
+import { DAY_MS, dayStart } from "./use-now"
 
 type Range = "14" | "30" | "60"
 
+const IN_LABEL = "Came in (purchases)"
+const OUT_LABEL = "Went out (sales)"
+
 const config = {
-  inbound: { label: "In", color: "var(--chart-1)" },
-  outbound: { label: "Out", color: "var(--chart-2)" },
+  inbound: { label: IN_LABEL, color: "var(--chart-1)" },
+  outbound: { label: OUT_LABEL, color: "var(--chart-2)" },
 } satisfies ChartConfig
 
 interface Row {
@@ -24,19 +28,15 @@ interface Row {
   outbound: number
 }
 
-const TICK = {
-  fontSize: 11,
-  fontFamily: "var(--font-geist-mono)",
-  fill: "var(--muted-foreground)",
-}
+const TICK = { fontSize: 13, fill: "var(--muted-foreground)" }
 
 /**
- * The dashboard's one rich moment: a mirrored ledger of the floor.
- * Units received from suppliers rise above the line in hi-vis,
- * units shipped to customers hang below it in grey.
+ * Stock in and out per day, all godowns together. Green bars: units that
+ * came in from suppliers. Blue bars: units that went out to customers.
+ * Side by side, both growing up from zero, so taller simply means more.
  */
 export function MovementChart({ className }: { className?: string }) {
-  const [range, setRange] = useState<Range>("30")
+  const [range, setRange] = useState<Range>("14")
   const movements = useInventory((s) => s.movements)
   const now = useNow(60_000)
 
@@ -54,131 +54,128 @@ export function MovementChart({ className }: { className?: string }) {
       if (m.type !== "purchase" && m.type !== "sale") continue
       const t = new Date(m.date).getTime()
       if (t < first) continue
-      const idx = Math.floor((dayStart(t) - first) / DAY_MS)
-      const row = rows[idx]
+      const row = rows[Math.floor((dayStart(t) - first) / DAY_MS)]
       if (!row) continue
       if (m.type === "purchase") {
         row.inbound += m.qty
         totalIn += m.qty
       } else {
-        row.outbound += m.qty // already negative
+        row.outbound += -m.qty // sales are stored as negative; show how many went out
         totalOut += -m.qty
       }
     }
     return { data: rows, totalIn, totalOut }
   }, [movements, range, now])
 
+  const barSize = range === "14" ? 14 : range === "30" ? 8 : 4
+
   return (
     <Panel
       className={className}
-      title="Stock movement"
-      description="Units received and shipped per day, all godowns"
+      title={`Stock in and out — last ${range} days`}
+      description="How many units came into your godowns and went out each day."
       action={
         <Segmented<Range>
           value={range}
           onValueChange={setRange}
           items={[
-            { value: "14", label: "14d" },
-            { value: "30", label: "30d" },
-            { value: "60", label: "60d" },
+            { value: "14", label: "14 days" },
+            { value: "30", label: "30 days" },
+            { value: "60", label: "60 days" },
           ]}
         />
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-          <Figure swatch="bg-[var(--chart-1)]" value={`+${num(totalIn)}`} label="in from suppliers" />
-          <Figure swatch="bg-[var(--chart-2)]" value={`−${num(totalOut)}`} label="out to customers" />
-          <span className="ml-auto font-mono text-xs text-muted-foreground tabular">
-            net {signed(totalIn - totalOut)}
-          </span>
+        <div className="flex flex-wrap gap-x-8 gap-y-3">
+          <Legend swatch="bg-[var(--chart-1)]" label={IN_LABEL} value={`${num(totalIn)} units`} />
+          <Legend swatch="bg-[var(--chart-2)]" label={OUT_LABEL} value={`${num(totalOut)} units`} />
         </div>
-        <ChartContainer config={config} className="aspect-auto h-[280px] w-full sm:h-[300px]">
-          <BarChart data={data} stackOffset="sign" barCategoryGap="18%" margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
-            <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="0" />
+        <p className="sr-only">
+          In the last {range} days, {num(totalIn)} units came in from suppliers and {num(totalOut)} units went out to customers.
+        </p>
+        <ChartContainer config={config} className="aspect-auto h-[260px] w-full sm:h-[300px]">
+          <BarChart data={data} barGap={2} barCategoryGap="20%" margin={{ top: 8, right: 4, bottom: 0, left: 0 }}>
+            <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis
               dataKey="label"
               tickLine={false}
-              axisLine={false}
+              axisLine={{ stroke: "var(--border)" }}
               tick={TICK}
               tickMargin={10}
-              minTickGap={28}
+              minTickGap={24}
               interval="preserveStartEnd"
             />
             <YAxis
               tickLine={false}
               axisLine={false}
               tick={TICK}
-              width={44}
-              tickFormatter={(v: number) => num(Math.abs(v))}
+              width={48}
+              allowDecimals={false}
+              tickFormatter={(v: number) => num(v)}
             />
-            <ReferenceLine y={0} stroke="var(--muted-foreground)" strokeOpacity={0.45} />
             <ChartTooltip
-              cursor={{ fill: "var(--raised)", opacity: 0.6 }}
+              cursor={{ fill: "var(--raised)" }}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null
                 const row = payload[0]?.payload as Row | undefined
-                if (!row) return null
-                return <MovementTooltip row={row} />
+                return row ? <DayTooltip row={row} /> : null
               }}
             />
             <Bar
               dataKey="inbound"
-              stackId="m"
+              name={IN_LABEL}
               fill="var(--color-inbound)"
-              radius={2}
-              maxBarSize={10}
-              animationDuration={600}
+              radius={[4, 4, 0, 0]}
+              maxBarSize={barSize}
+              animationDuration={500}
               animationEasing="ease-out"
             />
             <Bar
               dataKey="outbound"
-              stackId="m"
+              name={OUT_LABEL}
               fill="var(--color-outbound)"
-              radius={2}
-              maxBarSize={10}
-              animationDuration={600}
+              radius={[4, 4, 0, 0]}
+              maxBarSize={barSize}
+              animationDuration={500}
               animationEasing="ease-out"
             />
           </BarChart>
         </ChartContainer>
+        <p className="text-[13px] text-muted-foreground">Touch or point at a day to see its numbers.</p>
       </div>
     </Panel>
   )
 }
 
-function Figure({ swatch, value, label }: { swatch: string; value: string; label: string }) {
+function Legend({ swatch, label, value }: { swatch: string; label: string; value: string }) {
   return (
-    <div className="flex items-baseline gap-2">
-      <span aria-hidden className={cn("inline-block size-2 translate-y-[-1px] rounded-[2px]", swatch)} />
-      <span className="font-mono text-lg leading-none text-foreground tabular">{value}</span>
-      <span className="text-xs text-muted-foreground">{label}</span>
+    <div className="flex items-center gap-2.5">
+      <span aria-hidden className={cn("size-3 shrink-0 rounded-[3px]", swatch)} />
+      <span className="text-[15px] text-fg-secondary">{label}</span>
+      <span className="text-[15px] font-semibold text-foreground tabular">{value}</span>
     </div>
   )
 }
 
-function MovementTooltip({ row }: { row: Row }) {
-  const out = -row.outbound
+function DayTooltip({ row }: { row: Row }) {
   return (
-    <div className="min-w-40 rounded-lg border border-border bg-popover px-3 py-2.5 text-xs shadow-float">
-      <p className="mb-2 text-fg-secondary">{date(row.day)}</p>
+    <div className="min-w-48 rounded-lg border border-border bg-popover px-3.5 py-3 text-sm shadow-float">
+      <p className="mb-2 font-semibold text-foreground">{format(row.day, "EEEE, d MMM")}</p>
       <div className="flex flex-col gap-1.5">
-        <TipRow swatch="bg-[var(--chart-1)]" label="In" value={`+${num(row.inbound)}`} />
-        <TipRow swatch="bg-[var(--chart-2)]" label="Out" value={`−${num(out)}`} />
-        <div className="mt-0.5 border-t border-border pt-1.5">
-          <TipRow label="Net" value={signed(row.inbound - out)} />
-        </div>
+        <TipRow swatch="bg-[var(--chart-1)]" label="Came in" value={`${num(row.inbound)} units`} />
+        <TipRow swatch="bg-[var(--chart-2)]" label="Went out" value={`${num(row.outbound)} units`} />
       </div>
     </div>
   )
 }
 
-function TipRow({ swatch, label, value }: { swatch?: string; label: string; value: string }) {
+function TipRow({ swatch, label, value }: { swatch: string; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2">
-      {swatch ? <span aria-hidden className={cn("size-2 rounded-[2px]", swatch)} /> : <span className="size-2" />}
-      <span className="flex-1 text-muted-foreground">{label}</span>
-      <span className="font-mono text-foreground tabular">{value}</span>
+      <span aria-hidden className={cn("size-2.5 shrink-0 rounded-[2px]", swatch)} />
+      <span className="flex-1 text-fg-secondary">{label}:</span>
+      <span className="font-medium text-foreground tabular">{value}</span>
     </div>
   )
 }
